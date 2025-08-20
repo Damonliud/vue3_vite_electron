@@ -65,7 +65,7 @@ import { storeToRefs } from 'pinia';
 import { ElMessage } from 'element-plus'
 
 let store = useCounterStore()
-let { excelData } = storeToRefs(store)
+let { quarterExcelData } = storeToRefs(store)
 const formRef = ref()
 const xAxiData = ref([])
 const seriesData = ref([])
@@ -77,7 +77,7 @@ const formInline = ref({
 
 
 const submitForm = async (formEl) => {
-  if (Object.keys(excelData.value).length == 0) {
+  if (Object.keys(quarterExcelData.value).length == 0) {
     ElMessage.error('请先导入Excel')
     return
   }
@@ -94,7 +94,7 @@ const submitForm = async (formEl) => {
   })
 }
 
-watch(excelData, () => {
+watch(quarterExcelData, () => {
   formInline.value.quarterRelated1 = ''
   formInline.value.quarterRelated2 = ''
 }, {
@@ -106,9 +106,9 @@ let myChart = null;
 
 onActivated(() => {
   initChartInstance();
-  if (Object.keys(excelData.value).length == 0) return
+  if (Object.keys(quarterExcelData.value).length == 0) return
   quarterRelatedList.value = []
-  quarterRelatedList.value = processDataByQuarter(excelData.value)
+  quarterRelatedList.value = processDataByQuarter(quarterExcelData.value)
   if (quarterRelatedList.value.length > 0 && !formInline.value.quarterRelated1) {
     formInline.value.quarterRelated1 = formInline.value.quarterRelated1 || quarterRelatedList.value[0].label;
   }
@@ -149,12 +149,6 @@ let processDataByQuarter = (dataObject) => {
     });
   }
 
-  // resultArray.sort((a, b) => {
-  //   const quarterNumA = Number(a.label.split('_')[1]);
-  //   const quarterNumB = Number(b.label.split('_')[1]);
-  //   return quarterNumA - quarterNumB;
-  // });
-
   return resultArray;
 }
 
@@ -192,9 +186,7 @@ function updateChart (xAxiData = [], seriesData = []) {
   let growthPercentageText = '';
   if (seriesData.length >= 2) {
     const firstValue = seriesData[0];
-    console.log('firstValue:', firstValue)
     const lastValue = seriesData[seriesData.length - 1];
-    console.log('lastValue:', lastValue)
 
     if (firstValue !== 0) { // 避免除以零
       const percentage = ((lastValue - firstValue) / firstValue) * 100;

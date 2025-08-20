@@ -20,12 +20,49 @@
         :md="{ span: 12 }"
         :sm="{ span: 24 }"
         :xs="{ span: 24 }"
+        v-for="(table, key) in quarterTableData"
+        :key="key"
+      >
+        <el-table
+          :data="table"
+          show-summary
+          :summary-method="getSummaries"
+          style="margin-top: 20px"
+        >
+          <el-table-column :label="key">
+            <el-table-column
+              show-overflow-tooltip
+              prop="project"
+              label="Projects"
+            />
+            <el-table-column prop="cycleTime" label="Cycle Time (Day)" />
+            <el-table-column prop="weight" label="Weight">
+              <template v-slot="scope">
+                <span>{{ `${(scope.row.weight * 100).toFixed(2)}%` }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="velocity" label="Velocity" />
+            <el-table-column prop="weightedVelocity" label="Weighted Velocity">
+              <template v-slot="scope">
+                <span>{{ `${scope.row.weightedVelocity.toFixed(2)}` }}</span>
+              </template>
+            </el-table-column>
+          </el-table-column>
+        </el-table>
+      </el-col>
+    </el-row>
+    <el-divider style="margin:20px 0 0 0;"></el-divider>
+    <el-row :gutter="20">
+      <el-col
+        :lg="{ span: 12 }"
+        :md="{ span: 12 }"
+        :sm="{ span: 24 }"
+        :xs="{ span: 24 }"
         v-for="(table, key) in tableData"
         :key="key"
       >
         <el-table
           :data="table"
-          border
           show-summary
           :summary-method="getSummaries"
           style="margin-top: 20px"
@@ -120,8 +157,9 @@
 
   let store = useCounterStore();
   let { excelData } = storeToRefs(store);
-  let { setExcelData } = store;
+  let { setExcelData, setQuarterExcelData } = store;
   const tableData = ref([]);
+  const quarterTableData = ref([]);
   const sumArr = ref([]);
 
   onMounted(() => {
@@ -145,10 +183,63 @@
 
   const handleUpload = async (file) => {
     const data = await getXlsxData(file);
-    tableData.value = translateField(data);
-    formatSheetData(tableData.value)
-    console.log("tableData.value:", tableData.value);
+    let arr = translateField(data);
+    tableData.value = groupAndCalculateMetrics(arr);
+    setExcelData(tableData.value);
+
+    quarterTableData.value = quarterGroupAndCalculateMetrics(arr);
+    setQuarterExcelData(quarterTableData.value);
+
+    let obj = Object.assign({}, quarterTableData.value, tableData.value);
+    formatSheetData(obj)
   };
+
+  const quarterGroupAndCalculateMetrics = (arr) => {
+  	console.log('arr11:', arr)
+    const groupedMap = new Map();
+    arr.forEach((item) => {
+      if (item.Quarter !== undefined) {
+        const key = `Quarter_${item.Quarter}`;
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, []);
+        }
+        groupedMap.get(key).push(item);
+      } else {
+        console.warn(
+          "数据项缺少 'Quarter'字段，已跳过分组:",
+          item
+        );
+      }
+    });
+    console.log('groupedMap:', groupedMap)
+    const resultObject = {};
+    for (const [key, subArray] of groupedMap.entries()) {
+      const totalCycleTimeInSubArray = subArray.reduce((sum, item) => {
+        const ct = Number(item.cycleTime);
+        return sum + (isNaN(ct) ? 0 : ct);
+      }, 0);
+      console.log('totalCycleTimeInSubArray:', totalCycleTimeInSubArray)
+      const processedSubArray = subArray.map((item) => {
+        const newObject = { ...item };
+        const currentCycleTime = Number(newObject.cycleTime);
+        const currentVelocity = Number(newObject.velocity);
+        if (totalCycleTimeInSubArray !== 0 && !isNaN(currentCycleTime)) {
+          newObject.weight = currentCycleTime / totalCycleTimeInSubArray;
+        } else {
+          newObject.weight = 0;
+        }
+        if (!isNaN(newObject.weight) && !isNaN(currentVelocity)) {
+          newObject.weightedVelocity = newObject.weight * currentVelocity;
+        } else {
+          newObject.weightedVelocity = 0;
+        }
+        return newObject;
+      });
+      resultObject[key] = processedSubArray;
+    }
+    console.log('resultObject:', resultObject)
+    return resultObject;
+  }
 
   //读取表格数据
   const getXlsxData = async (file) => {
@@ -176,9 +267,7 @@
       });
       arr.push(arrItem);
     });
-    let tableData = groupAndCalculateMetrics(arr);
-    setExcelData(tableData);
-    return tableData;
+    return arr;
   };
 
   const getSummaries = (param) => {

@@ -8,5 +8,11 @@ export const useCounterStore = defineStore('counter', () => {
     excelData.value = { ...data }
   }
 
-  return { excelData, setExcelData }
+  const quarterExcelData = ref({})
+
+  function setQuarterExcelData(data) {
+    quarterExcelData.value = { ...data }
+  }
+
+  return { excelData, setExcelData, quarterExcelData, setQuarterExcelData }
 })
