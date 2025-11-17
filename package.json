@@ -1,13 +1,14 @@
 {
   "name": "vue-project",
-  "version": "0.0.0",
+  "productName": "Efficiency Calculator -V 0.1.0",
+  "version": "0.1.0",
   "private": true,
   "author": "kiosoft",
   "description": "The Project of Electron + Vue3 + Electron Forge",
   "main": "electron/electronMain.js",
   "type": "module",
   "scripts": {
-    "dev:vue": "vite",
+    "dev": "vite",
     "dev:electron": "electron .",
     "build": "vite build",
     "preview": "vite preview",

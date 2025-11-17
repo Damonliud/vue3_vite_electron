@@ -2,10 +2,10 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useCounterStore = defineStore('counter', () => {
-  const excelData = ref({})
+  const relatedExcelData = ref({})
 
-  function setExcelData(data) {
-    excelData.value = { ...data }
+  function setRelatedExcelData(data) {
+    relatedExcelData.value = { ...data }
   }
 
   const quarterExcelData = ref({})
@@ -14,5 +14,10 @@ export const useCounterStore = defineStore('counter', () => {
     quarterExcelData.value = { ...data }
   }
 
-  return { excelData, setExcelData, quarterExcelData, setQuarterExcelData }
+  return {
+    relatedExcelData,
+    setRelatedExcelData,
+    quarterExcelData,
+    setQuarterExcelData,
+  }
 })

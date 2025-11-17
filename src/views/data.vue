@@ -3,7 +3,7 @@
     <el-upload
       class="upload-demo"
       :on-change="handleUpload"
-      accept="xls,xlsx"
+      accept=".xls,.xlsx"
       :auto-upload="false"
       :show-file-list="false"
       :multiple="true"  drag
@@ -11,10 +11,10 @@
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
       <div class="el-upload__text">将文件拖到此处或 <em>点击上传</em></div>
     </el-upload>
-    <el-button v-if="isShow" type="primary" @click="exportData" style="margin-top: 20px;">
+    <!-- <el-button v-if="isShow" type="primary" @click="exportData" style="margin-top: 20px;">
       Export Excel
-    </el-button>
-    <el-row :gutter="20">
+    </el-button> -->
+    <!-- <el-row :gutter="20">
       <el-col
         :lg="{ span: 12 }"
         :md="{ span: 12 }"
@@ -34,6 +34,11 @@
               show-overflow-tooltip
               prop="project"
               label="Projects"
+            />
+            <el-table-column
+              show-overflow-tooltip
+              prop="pointsPerPrd"
+              label="Points per PRD"
             />
             <el-table-column prop="cycleTime" label="Cycle Time (Day)" />
             <el-table-column prop="weight" label="Weight">
@@ -73,6 +78,11 @@
               prop="project"
               label="Projects"
             />
+            <el-table-column
+              show-overflow-tooltip
+              prop="pointsPerPrd"
+              label="Points per PRD"
+            />
             <el-table-column prop="cycleTime" label="Cycle Time (Day)" />
             <el-table-column prop="weight" label="Weight">
               <template v-slot="scope">
@@ -88,7 +98,7 @@
           </el-table-column>
         </el-table>
       </el-col>
-    </el-row>
+    </el-row> -->
   </div>
 </template>
 <script setup>
@@ -100,7 +110,7 @@
   import { ElMessage } from "element-plus";
   const sheetData = ref([]);
 
-  let isShow = computed(() => Object.keys(excelData.value).length != 0)
+  let isShow = computed(() => Object.keys(relatedExcelData.value).length != 0)
 
   let formatSheetData = (tableData) => {
     sheetData.value=[]
@@ -120,51 +130,51 @@
         weightedVelocity: weightedVelocityTotal.toFixed(2),
       })
       let sheetName = key
-      let header = ["Projects", "Cycle Time (Day)", "Weight", "Velocity", "Weighted Velocity"]
+      let header = ["Projects","Points per PRD", "Cycle Time (Day)", "Weight", "Velocity", "Weighted Velocity"]
       let data = formateTable
-      let keys = ["project", "cycleTime", "weight", "velocity", "weightedVelocity"]
+      let keys = ["project", "pointsPerPrd", "cycleTime", "weight", "velocity", "weightedVelocity"]
       let sheetObj = {sheetName, header, data, keys}
       sheetData.value.push(sheetObj)
     }
   };
 
-  const exportMultiSheetExcel = (sheetsData, fileName) => {
-    const workbook = XLSX.utils.book_new();
-    sheetsData.forEach((sheetConfig) => {
-      const { sheetName, header, data, keys } = sheetConfig;
-      const sheetDataFormatted = data.map((row) => {
-        if (keys && keys.length > 0) {
-          return keys.map((key) => row[key]);
-        }
-        return Object.values(row);
-      });
-      const finalSheetData = [header, ...sheetDataFormatted];
-      const worksheet = XLSX.utils.aoa_to_sheet(finalSheetData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-    });
-    try {
-      XLSX.writeFile(workbook, `${fileName}.xlsx`);
-      ElMessage.success("Excel 文件导出成功！");
-    } catch (error) {
-      console.error("Excel 文件导出失败:", error);
-      ElMessage.error("Excel 文件导出失败，请重试！");
-    }
-  };
+  // const exportMultiSheetExcel = (sheetsData, fileName) => {
+  //   const workbook = XLSX.utils.book_new();
+  //   sheetsData.forEach((sheetConfig) => {
+  //     const { sheetName, header, data, keys } = sheetConfig;
+  //     const sheetDataFormatted = data.map((row) => {
+  //       if (keys && keys.length > 0) {
+  //         return keys.map((key) => row[key]);
+  //       }
+  //       return Object.values(row);
+  //     });
+  //     const finalSheetData = [header, ...sheetDataFormatted];
+  //     const worksheet = XLSX.utils.aoa_to_sheet(finalSheetData);
+  //     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  //   });
+  //   try {
+  //     XLSX.writeFile(workbook, `${fileName}.xlsx`);
+  //     ElMessage.success("Excel 文件导出成功！");
+  //   } catch (error) {
+  //     console.error("Excel 文件导出失败:", error);
+  //     ElMessage.error("Excel 文件导出失败，请重试！");
+  //   }
+  // };
 
-  const exportData = () => {
-    exportMultiSheetExcel(sheetData.value, "Quarter Related Table");
-  };
+  // const exportData = () => {
+  //   exportMultiSheetExcel(sheetData.value, "Quarter Related Table");
+  // };
 
   let store = useCounterStore();
-  let { excelData } = storeToRefs(store);
-  let { setExcelData, setQuarterExcelData } = store;
+  let { relatedExcelData } = storeToRefs(store);
+  let { setRelatedExcelData, setQuarterExcelData } = store;
   const tableData = ref([]);
   const quarterTableData = ref([]);
   const sumArr = ref([]);
 
   onMounted(() => {
-    if (Object.keys(excelData.value).length == 0) return;
-    tableData.value = excelData.value;
+    if (Object.keys(relatedExcelData.value).length == 0) return;
+    tableData.value = relatedExcelData.value;
   });
 
   //读取excel文件
@@ -185,17 +195,17 @@
     const data = await getXlsxData(file);
     let arr = translateField(data);
     tableData.value = groupAndCalculateMetrics(arr);
-    setExcelData(tableData.value);
+    setRelatedExcelData(tableData.value);
 
     quarterTableData.value = quarterGroupAndCalculateMetrics(arr);
     setQuarterExcelData(quarterTableData.value);
 
-    let obj = Object.assign({}, quarterTableData.value, tableData.value);
-    formatSheetData(obj)
+    // let obj = Object.assign({}, quarterTableData.value, tableData.value);
+    // formatSheetData(obj)
+    ElMessage.success("Excel 文件导入成功！");
   };
 
   const quarterGroupAndCalculateMetrics = (arr) => {
-  	console.log('arr11:', arr)
     const groupedMap = new Map();
     arr.forEach((item) => {
       if (item.Quarter !== undefined) {
@@ -211,14 +221,12 @@
         );
       }
     });
-    console.log('groupedMap:', groupedMap)
     const resultObject = {};
     for (const [key, subArray] of groupedMap.entries()) {
       const totalCycleTimeInSubArray = subArray.reduce((sum, item) => {
         const ct = Number(item.cycleTime);
         return sum + (isNaN(ct) ? 0 : ct);
       }, 0);
-      console.log('totalCycleTimeInSubArray:', totalCycleTimeInSubArray)
       const processedSubArray = subArray.map((item) => {
         const newObject = { ...item };
         const currentCycleTime = Number(newObject.cycleTime);
@@ -237,7 +245,6 @@
       });
       resultObject[key] = processedSubArray;
     }
-    console.log('resultObject:', resultObject)
     return resultObject;
   }
 
@@ -255,6 +262,7 @@
     const arr = [];
     const cnToEn = {
       Projects: "project",
+      'Total Story Points per PRD': "pointsPerPrd",
       "Cycle Time (Day)": "cycleTime",
       Velocity: "velocity",
       Quarter: "Quarter",

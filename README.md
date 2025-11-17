@@ -33,3 +33,10 @@ npm run build
 ```sh
 npm run lint
 ```
+
+### win环境打win包
+package
+make
+
+### win环境打mac包
+将代码推送到github的main分支，在Actions中下载自动打包好的dmg包

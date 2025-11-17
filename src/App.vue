@@ -4,8 +4,8 @@ import { useCounterStore } from "./stores/counter"
 import { storeToRefs } from 'pinia';
 import { computed } from 'vue';
 let store = useCounterStore()
-let { excelData } = storeToRefs(store)
-let isShow = computed(() => Object.keys(excelData.value).length != 0)
+let { relatedExcelData } = storeToRefs(store)
+let isShow = computed(() => Object.keys(relatedExcelData.value).length != 0)
 </script>
 
 <template>

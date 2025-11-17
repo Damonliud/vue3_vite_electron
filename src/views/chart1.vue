@@ -50,11 +50,56 @@
     <el-form-item>
       <el-button type="primary" @click="exportChart">Export Chart</el-button>
     </el-form-item>
+      <el-form-item>
+      <el-button type="primary" @click="exportData">Export Excel</el-button>
+    </el-form-item>
   </el-form>
   <div
     id="myEcharts"
     :style="{ width: '100%', height: '300px' }"
   ></div>
+      <el-row :gutter="20">
+      <el-col
+        :lg="{ span: 12 }"
+        :md="{ span: 12 }"
+        :sm="{ span: 24 }"
+        :xs="{ span: 24 }"
+        v-for="(table, key) in relatedExcelData"
+        :key="key"
+      >
+        <el-table
+          :data="table"
+          show-summary
+          :summary-method="getSummaries"
+          style="margin-top: 20px"
+        >
+          <el-table-column :label="key">
+            <el-table-column
+              show-overflow-tooltip
+              prop="project"
+              label="Projects"
+            />
+            <el-table-column
+              show-overflow-tooltip
+              prop="pointsPerPrd"
+              label="Points per PRD"
+            />
+            <el-table-column prop="cycleTime" label="Cycle Time (Day)" />
+            <el-table-column prop="weight" label="Weight">
+              <template v-slot="scope">
+                <span>{{ `${(scope.row.weight * 100).toFixed(2)}%` }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="velocity" label="Velocity" />
+            <el-table-column prop="weightedVelocity" label="Weighted Velocity">
+              <template v-slot="scope">
+                <span>{{ `${scope.row.weightedVelocity.toFixed(2)}` }}</span>
+              </template>
+            </el-table-column>
+          </el-table-column>
+        </el-table>
+      </el-col>
+    </el-row>
 </template>
 
 <script setup>
@@ -63,20 +108,22 @@ import * as echarts from "echarts";
 import { useCounterStore } from "../stores/counter"
 import { storeToRefs } from 'pinia';
 import { ElMessage } from 'element-plus'
+import * as XLSX from "xlsx";
 
 let store = useCounterStore()
 const formRef = ref()
 const xAxiData = ref([])
 const seriesData = ref([])
-let { excelData } = storeToRefs(store)
+let { quarterExcelData ,relatedExcelData } = storeToRefs(store)
 const quarterRelatedList = ref([])
 const formInline = ref({
   quarterRelated1: '',
   quarterRelated2: '',
 })
-
+const sumArr = ref([]);
+const sheetData = ref([]);
 const submitForm = async (formEl) => {
-  if (Object.keys(excelData.value).length == 0) {
+  if (Object.keys(relatedExcelData.value).length == 0) {
     ElMessage.error('请先导入Excel')
     return
   }
@@ -93,7 +140,7 @@ const submitForm = async (formEl) => {
   })
 }
 
-watch(excelData, () => {
+watch(relatedExcelData, () => {
   formInline.value.quarterRelated1 = ''
   formInline.value.quarterRelated2 = ''
 }, {
@@ -105,10 +152,10 @@ let myChart = null;
 
 onActivated(() => {
   initChartInstance();
-  if (Object.keys(excelData.value).length == 0) return
+  if (Object.keys(relatedExcelData.value).length == 0) return
   quarterRelatedList.value = []
-  for (const key in excelData.value) {
-    let val = excelData.value[key]
+  for (const key in relatedExcelData.value) {
+    let val = relatedExcelData.value[key]
     let sum = val.reduce((sum, cur) => sum + cur.weightedVelocity, 0)
     quarterRelatedList.value.push({ value: sum.toFixed(2), label: key })
   }
@@ -118,6 +165,8 @@ onActivated(() => {
   if (quarterRelatedList.value.length > 1 && !formInline.value.quarterRelated2) {
     formInline.value.quarterRelated2 = formInline.value.quarterRelated2 || quarterRelatedList.value[1].label;
   }
+  let obj = Object.assign({}, quarterExcelData.value, relatedExcelData.value);
+  formatSheetData(obj)
   submitForm(formRef.value)
 });
 
@@ -129,6 +178,60 @@ onDeactivated(() => {
 
   window.removeEventListener('resize', resizeChart);
 });
+
+let formatSheetData = (tableData) => {
+  sheetData.value=[]
+  for (const key in tableData) {
+    let cycleTimeTotal = tableData[key].reduce((i, c) => i + c.cycleTime, 0)
+    let weightedVelocityTotal = tableData[key].reduce((i, c) => i + c.weightedVelocity, 0)
+    let formateTable = tableData[key].map(i => ({
+      ...i,
+        weight: `${(i.weight*100).toFixed(2)}%`,
+        velocity: i.velocity.toFixed(2),
+        weightedVelocity: i.weightedVelocity.toFixed(2)
+      }))
+    formateTable.push({
+      project: 'Total',
+      cycleTime: cycleTimeTotal,
+      velocity: 'Final Velocity',
+      weightedVelocity: weightedVelocityTotal.toFixed(2),
+    })
+    let sheetName = key
+    let header = ["Projects","Points per PRD", "Cycle Time (Day)", "Weight", "Velocity", "Weighted Velocity"]
+    let data = formateTable
+    let keys = ["project", "pointsPerPrd", "cycleTime", "weight", "velocity", "weightedVelocity"]
+    let sheetObj = {sheetName, header, data, keys}
+    sheetData.value.push(sheetObj)
+  }
+};
+
+const exportMultiSheetExcel = (sheetsData, fileName) => {
+  const workbook = XLSX.utils.book_new();
+  sheetsData.forEach((sheetConfig) => {
+    const { sheetName, header, data, keys } = sheetConfig;
+    const sheetDataFormatted = data.map((row) => {
+      if (keys && keys.length > 0) {
+        return keys.map((key) => row[key]);
+      }
+      return Object.values(row);
+    });
+    const finalSheetData = [header, ...sheetDataFormatted];
+    const worksheet = XLSX.utils.aoa_to_sheet(finalSheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+  try {
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    ElMessage.success("Excel 文件导出成功！");
+  } catch (error) {
+    console.error("Excel 文件导出失败:", error);
+    ElMessage.error("Excel 文件导出失败，请重试！");
+  }
+};
+
+
+const exportData = () => {
+  exportMultiSheetExcel(sheetData.value, "Quarter Related Table");
+};
 
 function initChartInstance () {
   const chartDom = document.getElementById("myEcharts");
@@ -155,9 +258,7 @@ function updateChart (xAxiData = [], seriesData = []) {
   let growthPercentageText = '';
   if (seriesData.length >= 2) {
     const firstValue = seriesData[0];
-    console.log('firstValue:', firstValue)
     const lastValue = seriesData[seriesData.length - 1];
-    console.log('lastValue:', lastValue)
 
     if (firstValue !== 0) { // 避免除以零
       const percentage = ((lastValue - firstValue) / firstValue) * 100;
@@ -193,7 +294,43 @@ function updateChart (xAxiData = [], seriesData = []) {
     ]
   });
 }
-
+  const getSummaries = (param) => {
+    const { columns, data } = param;
+    const sums = [];
+    columns.forEach((column, index) => {
+      if (index === 0) {
+        sums[index] = "Total";
+        return;
+      }
+      if (index === columns.length - 2) {
+        sums[index] = "Final Velocity";
+        return;
+      }
+      const prop = column.property;
+      if (prop === "cycleTime" || prop === "weightedVelocity") {
+        const values = data.map((item) => Number(item[column.property]));
+        if (!values.every((value) => Number.isNaN(value))) {
+          sums[index] = `${values.reduce((prev, curr) => {
+            const value = Number(curr);
+            if (!Number.isNaN(value)) {
+              return prev + curr;
+            } else {
+              return prev;
+            }
+          }, 0)}`;
+          if (prop === "cycleTime") {
+            sumArr.value.push(sums[index]);
+          }
+          if (prop === "weightedVelocity") {
+            sums[index] = Number(sums[index]).toFixed(2);
+          }
+        } else {
+          sums[index] = "N/A";
+        }
+      }
+    });
+    return sums;
+  };
 const exportChart = () => {
   exportChartAsImage('png', 1, 'Quarter Related Chart');
 }
