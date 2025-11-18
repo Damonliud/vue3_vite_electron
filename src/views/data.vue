@@ -11,9 +11,6 @@
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
       <div class="el-upload__text">将文件拖到此处或 <em>点击上传</em></div>
     </el-upload>
-    <!-- <el-button v-if="isShow" type="primary" @click="exportData" style="margin-top: 20px;">
-      Export Excel
-    </el-button> -->
     <!-- <el-row :gutter="20">
       <el-col
         :lg="{ span: 12 }"
