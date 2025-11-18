@@ -6,8 +6,6 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
-import { version } from '../package.json'
-console.log('version info:', version)
 const app = createApp(App)
 
 app.use(createPinia())
