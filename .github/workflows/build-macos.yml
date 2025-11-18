@@ -20,7 +20,7 @@ jobs: # 定义一个或多个作业 (jobs)
       - name: Setup Node.js # 步骤名称：设置 Node.js 环境
         uses: actions/setup-node@v4 # 使用 Node.js setup action
         with:
-          node-version: '22' # 指定 Node.js 版本，确保与你的项目兼容 (例如 20.x LTS)
+          node-version: '20' # 指定 Node.js 版本，确保与你的项目兼容 (例如 20.x LTS)
           cache: 'npm' # 缓存 npm 依赖，加快后续构建速度
 
       - name: Install dependencies # 步骤名称：安装项目依赖
