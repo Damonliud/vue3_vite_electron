@@ -4,6 +4,10 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 export default {
   packagerConfig: {
     asar: true,
+    // 禁用 macOS 代码签名
+    osxSign: false,
+    // 禁用 macOS 公证 (notarize)
+    osxNotarize: false,
   },
   rebuildConfig: {},
   makers: [
